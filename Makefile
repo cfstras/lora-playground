@@ -12,4 +12,8 @@ second: run
 
 run:
 	platformio run -t upload --upload-port $(DEV)
+	$(MAKE) monitor DEV=$(DEV)
+
+monitor:
 	platformio device monitor --port $(DEV)
+	@#minicom -D $(DEV)
