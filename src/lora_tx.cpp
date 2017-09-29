@@ -34,7 +34,7 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 char prompt_str[32] = "> ";
 
-int beaconTimeout = 30 * 10; // 30 secs
+int beaconTimeout = 60 * 10; // 30 secs
 int beaconTimer = 0;
 uint8_t my_id = 0;
 
@@ -70,6 +70,11 @@ void setup() {
         while (1);
     }
     Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
+
+    if (!rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096)) {
+        Serial.println("setModemConfig failed");
+        while (1);
+    }
 
     // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 
@@ -135,8 +140,8 @@ void loop() {
         beaconTimer = 0;
     }
 
-    size_t avail = Serial.available();
-    if (avail) {
+    size_t avail;
+    while ((avail = Serial.available())) {
         int b = Serial.read();
         if (b != -1 && b != '\n' && b != '\r') {
             if (!prompt) {
@@ -151,7 +156,9 @@ void loop() {
         }
         if (buf_len > 0 && (b == '\n' || b == '\r' || buf_len == buf_cap)) {
             Serial.println();
+            Serial.print("...\r");Serial.flush();
             send_p(Header{1, my_id}, buffer, buf_len);
+            Serial.print("   \r");Serial.flush();
             buf_len = 0;
             buffer[0] = 0;
             if (!prompt) {
@@ -163,12 +170,13 @@ void loop() {
         } else if (b == '\n' || b == '\r') {
             if (!prompt) {
                 prompt = true;
-                Serial.print(prompt_str);
             }
+            Serial.println();
+            Serial.print(prompt_str);
         }
     }
 
-    if (rf95.waitAvailableTimeout(100)) {
+    if (rf95.waitAvailableTimeout(200)) {
         char receive_buf[RH_RF95_MAX_MESSAGE_LEN] = {0};
         uint8_t len = RH_RF95_MAX_MESSAGE_LEN-1;
         // Should be a reply message for us now
@@ -192,5 +200,5 @@ void loop() {
         }
     } else {
     }
-    //delay(50);
+    delay(100);
 }
